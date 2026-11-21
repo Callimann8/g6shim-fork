@@ -4,6 +4,8 @@
 
 #if defined(G6SHIM_HAVE_FFMPEG)
 
+#include "contexts.hpp"
+
 #include <windows.h>
 
 extern "C" {
@@ -154,7 +156,7 @@ private:
     AVFrame* frame_ = nullptr;
     unsigned channels_ = 0;
     std::uint32_t rate_ = 0;
-    alignas(16) std::uint8_t buffer_[kXmaPacketBytes + AV_INPUT_BUFFER_PADDING_SIZE] = {};
+    std::uint8_t buffer_[kXmaPacketBytes + AV_INPUT_BUFFER_PADDING_SIZE] = {};
 };
 
 }  // namespace
