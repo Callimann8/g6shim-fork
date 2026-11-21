@@ -18,20 +18,33 @@ add_executable(g6shim_tests
   unit/console_d3d12_test.cpp
   unit/console_device_test.cpp
   unit/xg_layout_test.cpp
+  unit/acphal_test.cpp
   "${PROJECT_SOURCE_DIR}/hle/d3d12_x/graphics_object.cpp"
   "${PROJECT_SOURCE_DIR}/hle/d3d12_x/device.cpp"
   "${PROJECT_SOURCE_DIR}/hle/d3d12_x/objects.cpp"
   "${PROJECT_SOURCE_DIR}/hle/d3d12_x/dxgi.cpp"
   "${PROJECT_SOURCE_DIR}/hle/d3d12_x/frame_pacing.cpp"
   "${PROJECT_SOURCE_DIR}/hle/xg_x/layout.cpp"
-  "${PROJECT_SOURCE_DIR}/hle/xg_x/computer.cpp")
+  "${PROJECT_SOURCE_DIR}/hle/xg_x/computer.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/apu_memory.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/shape.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/processor.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/title_memory.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/engine.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/xma_decoder.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/ffmpeg_decoder.cpp")
 target_link_libraries(g6shim_tests PRIVATE g6shim_core g6shim::winrt d3d12 dxgi)
 target_include_directories(g6shim_tests PRIVATE
   "${PROJECT_SOURCE_DIR}/hle/kernelx"
   "${PROJECT_SOURCE_DIR}/hle/d3d11_x"
   "${PROJECT_SOURCE_DIR}/hle/d3d12_x"
   "${PROJECT_SOURCE_DIR}/hle/xg_x"
+  "${PROJECT_SOURCE_DIR}/hle/acphal"
   "${PROJECT_SOURCE_DIR}/winrt")
+if(G6SHIM_FFMPEG_INCLUDE_DIR)
+  target_include_directories(g6shim_tests SYSTEM PRIVATE "${G6SHIM_FFMPEG_INCLUDE_DIR}")
+  target_compile_definitions(g6shim_tests PRIVATE G6SHIM_HAVE_FFMPEG)
+endif()
 add_test(NAME unit COMMAND g6shim_tests)
 set_tests_properties(unit PROPERTIES TIMEOUT 30
   ENVIRONMENT "G6SHIM_LOG=${CMAKE_CURRENT_BINARY_DIR}/unit.log;G6SHIM_LOG_STDERR=0")

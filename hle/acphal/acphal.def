@@ -1,9 +1,9 @@
 LIBRARY "AcpHal.dll"
 EXPORTS
     AcpHalAllocateShapeContexts=g6shim_AcpHalAllocateShapeContexts
-    AcpHalCreate=g6shim_stub_1
-    AcpHalReleaseShapeContexts=g6shim_stub_2
-    ApuAlloc=g6shim_stub_3
-    ApuFree=g6shim_stub_4
+    AcpHalCreate=g6shim_AcpHalCreate
+    AcpHalReleaseShapeContexts=g6shim_AcpHalReleaseShapeContexts
+    ApuAlloc=g6shim_ApuAlloc
+    ApuFree=g6shim_ApuFree
     ApuIsVirtualAddressValid=g6shim_stub_5
-    ApuMapVirtualAddress=g6shim_stub_6
+    ApuMapVirtualAddress=g6shim_ApuMapVirtualAddress
