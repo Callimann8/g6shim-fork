@@ -155,9 +155,9 @@ EXPORTS
     WaitForMultipleObjects=kernel32.WaitForMultipleObjects
     WaitForMultipleObjectsEx=kernel32.WaitForMultipleObjectsEx
     WaitForSingleObject=kernel32.WaitForSingleObject
-    WaitOnAddress=g6shim_stub_6
-    WakeByAddressAll=g6shim_stub_7
-    WakeByAddressSingle=g6shim_stub_8
+    WaitOnAddress=kernelbase.WaitOnAddress
+    WakeByAddressAll=kernelbase.WakeByAddressAll
+    WakeByAddressSingle=kernelbase.WakeByAddressSingle
     WakeConditionVariable=kernel32.WakeConditionVariable
     WideCharToMultiByte=kernel32.WideCharToMultiByte
     WriteFile=kernel32.WriteFile
