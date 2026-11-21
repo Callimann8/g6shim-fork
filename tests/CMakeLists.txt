@@ -27,7 +27,9 @@ add_executable(g6shim_tests
   "${PROJECT_SOURCE_DIR}/hle/xg_x/layout.cpp"
   "${PROJECT_SOURCE_DIR}/hle/xg_x/computer.cpp"
   "${PROJECT_SOURCE_DIR}/hle/acphal/apu_memory.cpp"
-  "${PROJECT_SOURCE_DIR}/hle/acphal/shape.cpp")
+  "${PROJECT_SOURCE_DIR}/hle/acphal/shape.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/processor.cpp"
+  "${PROJECT_SOURCE_DIR}/hle/acphal/title_memory.cpp")
 target_link_libraries(g6shim_tests PRIVATE g6shim_core g6shim::winrt d3d12 dxgi)
 target_include_directories(g6shim_tests PRIVATE
   "${PROJECT_SOURCE_DIR}/hle/kernelx"

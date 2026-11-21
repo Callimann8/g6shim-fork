@@ -6,4 +6,4 @@ EXPORTS
     ApuAlloc=g6shim_ApuAlloc
     ApuFree=g6shim_ApuFree
     ApuIsVirtualAddressValid=g6shim_stub_5
-    ApuMapVirtualAddress=g6shim_stub_6
+    ApuMapVirtualAddress=g6shim_ApuMapVirtualAddress

@@ -3,4 +3,3 @@
 #include <g6shim/stub.hpp>
 
 G6SHIM_STUB(5, "AcpHal.dll", "ApuIsVirtualAddressValid")
-G6SHIM_STUB(6, "AcpHal.dll", "ApuMapVirtualAddress")

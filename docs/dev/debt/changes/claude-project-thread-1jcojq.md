@@ -1,17 +1,22 @@
 # acphal
 
-## change `AcpHalAllocateShapeContexts` fails
-
-- `AcpHalAllocateShapeContexts` allocates the arrays, but nothing processes them until `AcpHalCreate` exists.
-  Closes when: `AcpHalCreate` returns a processor that walks the arrays.
-  Title IDs: 1738CA2A
+## remove `AcpHalAllocateShapeContexts` fails
 
 ## change `AcpHalAllocateShapeContexts` takes two pointers
 
-- Shape-context entry layouts are unknown beyond their size.
+- Shape-context entry layouts are unknown beyond their size; nothing reads the arrays.
+  Title IDs: 1738CA2A
+
+## add Silent stubs
+
+- `IAcpHal::Send` command 1 completes buffers without playing them.
+  Closes when: the buffers reach a WASAPI stream.
+  Title IDs: 1738CA2A
+- `IAcpHal::Send` command 2 succeeds without effect.
   Title IDs: 1738CA2A
 
 ## add Functional
 
-- `AcpHalCreate` fails with `E_NOTIMPL`; audio libraries then release the shape contexts.
+- The processor completes command-1 buffers and posts one fence per 256-sample frame at 48 kHz; the console's frame size and cadence are unknown.
   Title IDs: 1738CA2A
+- `ApuIsVirtualAddressValid` is a stub.

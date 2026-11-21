@@ -55,8 +55,11 @@ extern "C" HRESULT g6shim_ApuFree(void* address) {
     return S_OK;
 }
 
-extern "C" HRESULT g6shim_AcpHalCreate(void** out) {
-    if (out) *out = nullptr;
-    G6SHIM_INFO("AcpHalCreate(%p): no processor -> E_NOTIMPL", static_cast<void*>(out));
-    return E_NOTIMPL;
+extern "C" std::uint32_t g6shim_ApuMapVirtualAddress(const void* address) {
+    const auto at = reinterpret_cast<std::uintptr_t>(address);
+    if (!apu_blocks().contains(at, 1)) {
+        G6SHIM_WARN("ApuMapVirtualAddress(%p): not APU memory", address);
+        return 0;
+    }
+    return static_cast<std::uint32_t>(at);
 }
