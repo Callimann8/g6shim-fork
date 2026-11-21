@@ -4,12 +4,22 @@
 
 #include <g6shim/log.hpp>
 
-#include <utility>
-
 namespace g6shim::acphal {
 
-Processor::Processor(BufferSink sink, AddressCheck valid_address)
-    : sink_(std::move(sink)), valid_address_(std::move(valid_address)) {}
+std::size_t payload_bytes(Command command) {
+    switch (command) {
+    case Command::RunList: return 16;
+    case Command::Start: return 4;
+    case Command::ResetVoice: return 4;
+    case Command::ReleaseDma: return 8;
+    case Command::RefillInput: return 8;
+    }
+    return 0;
+}
+
+bool known_command(std::uint32_t command) {
+    return payload_bytes(static_cast<Command>(command)) != 0;
+}
 
 HRESULT Processor::init(std::uint32_t command_entries, std::uint32_t message_entries) {
     if (command_entries == 0 || message_entries == 0 || command_entries > kMaxQueueEntries ||
@@ -22,17 +32,9 @@ HRESULT Processor::init(std::uint32_t command_entries, std::uint32_t message_ent
     return S_OK;
 }
 
-HRESULT Processor::submit_buffer(const SubmitBufferPayload& payload) {
+HRESULT Processor::send(const CommandRecord& record) {
     if (!initialized_) return E_UNEXPECTED;
-    if (!valid_address_(payload.apu_address)) {
-        G6SHIM_WARN("acphal: buffer at APU address 0x%08x is not APU memory", payload.apu_address);
-        return E_INVALIDARG;
-    }
-    return commands_.push(payload) ? S_OK : E_OUTOFMEMORY;
-}
-
-HRESULT Processor::start(const StartPayload&) {
-    return initialized_ ? S_OK : E_UNEXPECTED;
+    return commands_.push(record) ? S_OK : E_OUTOFMEMORY;
 }
 
 HRESULT Processor::request_shutdown() {
@@ -55,11 +57,19 @@ std::uint32_t Processor::pending_messages() const {
 
 void Processor::run_frame() {
     if (!initialized_) return;
-    while (auto buffer = commands_.pop()) {
-        sink_(*buffer);
-        post(MessageType::BufferDone, 0);
+    while (auto record = commands_.pop()) execute(*record);
+}
+
+void Processor::execute(const CommandRecord& r) {
+    switch (r.command) {
+    case Command::RunList: engine_.run_list(r.payload[1], r.payload[0]); break;
+    case Command::Start: break;
+    case Command::ResetVoice: engine_.reset_voice(r.payload[0]); break;
+    case Command::ReleaseDma: engine_.release_dma(r.payload[0], r.payload[1]); break;
+    case Command::RefillInput: engine_.refill_input(r.payload[0], r.payload[1]); break;
     }
-    post(MessageType::Fence, ++fence_);
+    if (r.command == Command::RunList) post(MessageType::ListDone, 0);
+    if (r.sequence != 0) post(MessageType::CommandDone, r.sequence);
 }
 
 void Processor::post(MessageType type, std::uint64_t value) {

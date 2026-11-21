@@ -1,8 +1,10 @@
 // SPDX-FileCopyrightText: 2026 gookie and g6shim contributors
 // SPDX-License-Identifier: LGPL-3.0-or-later
 #include "apu_memory.hpp"
+#include "engine.hpp"
 #include "frame_clock.hpp"
 #include "processor.hpp"
+#include "shape.hpp"
 #include "title_memory.hpp"
 
 #include <g6shim/log.hpp>
@@ -17,15 +19,24 @@ namespace {
 
 constexpr HRESULT kSlotUnsupported = static_cast<HRESULT>(0x8AC80F0E);
 
-bool apu_address_valid(std::uint32_t apu_address) {
-    return apu_address != 0 && apu_blocks().contains(apu_address, 1);
+ContextArrays shape_contexts() {
+    const ShapeArrays s = current_shapes();
+    auto index = [](ShapeKind k) { return static_cast<std::size_t>(k); };
+    ContextArrays a;
+    a.xma = static_cast<XmaContext*>(s.array[index(ShapeKind::Xma)]);
+    a.xma_count = a.xma ? s.count[index(ShapeKind::Xma)] : 0;
+    a.src = static_cast<SrcContext*>(s.array[index(ShapeKind::Src)]);
+    a.src_count = a.src ? s.count[index(ShapeKind::Src)] : 0;
+    a.dma = static_cast<DmaContext*>(s.array[index(ShapeKind::Dma)]);
+    a.dma_count = a.dma ? s.count[index(ShapeKind::Dma)] : 0;
+    return a;
 }
-
-void discard_buffer(const SubmitBufferPayload&) {}
 
 class AcpHal final {
 public:
-    AcpHal() : processor_(&discard_buffer, &apu_address_valid), clock_([this] { processor_.run_frame(); }) {}
+    AcpHal()
+        : engine_(memory_, &shape_contexts, &make_xma_decoder), processor_(engine_),
+          clock_([this] { processor_.run_frame(); }) {}
 
     virtual HRESULT Init(std::uint32_t command_entries, std::uint32_t message_entries) {
         HRESULT hr = processor_.init(command_entries, message_entries);
@@ -40,24 +51,23 @@ public:
         return processor_.request_shutdown();
     }
 
-    virtual HRESULT Send(std::uint32_t command, std::uint32_t size, std::uint32_t target, const void* payload,
+    virtual HRESULT Send(std::uint32_t command, std::uint64_t sequence, std::uint32_t target, const void* payload,
                          std::uint32_t flags) {
-        switch (static_cast<Command>(command)) {
-        case Command::SubmitBuffer: {
-            SubmitBufferPayload p{};
-            if (!copy_from_title(payload, &p, sizeof(p))) return bad_send(command, size, target, payload, flags);
-            return processor_.submit_buffer(p);
+        if (!known_command(command)) {
+            if (!unknown_logged_.exchange(true))
+                G6SHIM_WARN("IAcpHal::Send(0x%x, %llu, 0x%x, %p, 0x%x): unknown command -> E_NOTIMPL", command,
+                            static_cast<unsigned long long>(sequence), target, payload, flags);
+            return E_NOTIMPL;
         }
-        case Command::Start: {
-            StartPayload p{};
-            if (!copy_from_title(payload, &p, sizeof(p))) return bad_send(command, size, target, payload, flags);
-            return processor_.start(p);
+        CommandRecord r{};
+        r.command = static_cast<Command>(command);
+        r.sequence = sequence;
+        if (!copy_from_title(payload, r.payload, payload_bytes(r.command))) {
+            G6SHIM_WARN("IAcpHal::Send(0x%x, %llu, 0x%x, %p, 0x%x): unreadable payload", command,
+                        static_cast<unsigned long long>(sequence), target, payload, flags);
+            return E_INVALIDARG;
         }
-        }
-        if (!unknown_logged_.exchange(true))
-            G6SHIM_WARN("IAcpHal::Send(%u, %u, 0x%x, %p, 0x%x): unknown command -> E_NOTIMPL", command, size,
-                        target, payload, flags);
-        return E_NOTIMPL;
+        return processor_.send(r);
     }
 
     virtual bool NextMessage(void* out) {
@@ -81,13 +91,8 @@ public:
     virtual HRESULT Slot9() { return kSlotUnsupported; }
 
 private:
-    HRESULT bad_send(std::uint32_t command, std::uint32_t size, std::uint32_t target, const void* payload,
-                     std::uint32_t flags) {
-        G6SHIM_WARN("IAcpHal::Send(%u, %u, 0x%x, %p, 0x%x): unreadable payload", command, size, target, payload,
-                    flags);
-        return E_INVALIDARG;
-    }
-
+    TitleApuMemory memory_;
+    AudioEngine engine_;
     Processor processor_;
     FrameClock clock_;
     std::atomic<bool> unknown_logged_{false};

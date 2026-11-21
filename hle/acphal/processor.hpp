@@ -8,12 +8,18 @@
 
 #include <atomic>
 #include <cstdint>
-#include <functional>
 
 namespace g6shim::acphal {
 
-enum class Command : std::uint32_t { SubmitBuffer = 1, Start = 2 };
-enum class MessageType : std::uint32_t { BufferDone = 2, Fence = 0x10, ShutdownDone = 0x80 };
+enum class Command : std::uint32_t {
+    RunList = 1,
+    Start = 2,
+    ResetVoice = 7,
+    ReleaseDma = 0x10,
+    RefillInput = 0x13,
+};
+
+enum class MessageType : std::uint32_t { ListDone = 2, CommandDone = 0x10, ShutdownDone = 0x80 };
 
 #pragma pack(push, 4)
 struct Message {
@@ -25,45 +31,50 @@ struct Message {
 #pragma pack(pop)
 static_assert(sizeof(Message) == 0x1C);
 
-struct SubmitBufferPayload {
-    std::uint32_t count;
-    std::uint32_t apu_address;
-    std::uint64_t reserved;
-};
-static_assert(sizeof(SubmitBufferPayload) == 16);
+constexpr std::size_t kMaxPayloadBytes = 16;
 
-struct StartPayload {
-    std::uint32_t value;
+struct CommandRecord {
+    Command command;
+    std::uint64_t sequence;
+    std::uint32_t payload[kMaxPayloadBytes / 4];
+};
+
+std::size_t payload_bytes(Command command);
+bool known_command(std::uint32_t command);
+
+class Engine {
+public:
+    virtual void run_list(std::uint32_t apu_address, std::uint32_t entries) = 0;
+    virtual void reset_voice(std::uint32_t xma_index) = 0;
+    virtual void refill_input(std::uint32_t xma_index, std::uint32_t buffer) = 0;
+    virtual void release_dma(std::uint32_t dma_index, std::uint32_t blocks) = 0;
+
+protected:
+    ~Engine() = default;
 };
 
 constexpr std::uint32_t kMaxQueueEntries = 0x10000;
 
-using BufferSink = std::function<void(const SubmitBufferPayload&)>;
-using AddressCheck = std::function<bool(std::uint32_t apu_address)>;
-
 class Processor {
 public:
-    Processor(BufferSink sink, AddressCheck valid_address);
+    explicit Processor(Engine& engine) : engine_(engine) {}
 
     HRESULT init(std::uint32_t command_entries, std::uint32_t message_entries);
-    HRESULT submit_buffer(const SubmitBufferPayload& payload);
-    HRESULT start(const StartPayload& payload);
+    HRESULT send(const CommandRecord& record);
     HRESULT request_shutdown();
     bool next_message(Message& out);
     std::uint32_t pending_messages() const;
     void run_frame();
-    std::uint64_t fence() const { return fence_; }
     std::uint64_t dropped_messages() const { return dropped_; }
 
 private:
+    void execute(const CommandRecord& record);
     void post(MessageType type, std::uint64_t value);
 
-    BufferSink sink_;
-    AddressCheck valid_address_;
-    BoundedQueue<SubmitBufferPayload> commands_;
+    Engine& engine_;
+    BoundedQueue<CommandRecord> commands_;
     BoundedQueue<Message> messages_;
     std::atomic<bool> initialized_{false};
-    std::atomic<std::uint64_t> fence_{0};
     std::atomic<std::uint64_t> dropped_{0};
 };
 
