@@ -307,6 +307,17 @@ TEST(acphal_decoder_falls_back_to_silence_without_ffmpeg) {
     if (!make_ffmpeg_decoder()) CHECK(dynamic_cast<SilentDecoder*>(d.get()) != nullptr);
 }
 
+TEST(acphal_ffmpeg_decoder_survives_empty_packets) {
+    auto d = make_ffmpeg_decoder();
+    if (!d) return;
+    PcmPlanes out;
+    std::uint8_t packet[kXmaPacketBytes] = {};
+    d->decode(packet, 2, 48000, out);
+    d->reset();
+    d->decode(packet, 1, 44100, out);
+    CHECK(out.channel[0].size() < 100000);
+}
+
 TEST(acphal_title_memory_reads_are_checked) {
     std::uint32_t value = 7, out = 0;
     CHECK(copy_from_title(&value, &out, sizeof(out)) && out == 7);

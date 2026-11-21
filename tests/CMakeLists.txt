@@ -41,6 +41,10 @@ target_include_directories(g6shim_tests PRIVATE
   "${PROJECT_SOURCE_DIR}/hle/xg_x"
   "${PROJECT_SOURCE_DIR}/hle/acphal"
   "${PROJECT_SOURCE_DIR}/winrt")
+if(G6SHIM_FFMPEG_INCLUDE_DIR)
+  target_include_directories(g6shim_tests SYSTEM PRIVATE "${G6SHIM_FFMPEG_INCLUDE_DIR}")
+  target_compile_definitions(g6shim_tests PRIVATE G6SHIM_HAVE_FFMPEG)
+endif()
 add_test(NAME unit COMMAND g6shim_tests)
 set_tests_properties(unit PROPERTIES TIMEOUT 30
   ENVIRONMENT "G6SHIM_LOG=${CMAKE_CURRENT_BINARY_DIR}/unit.log;G6SHIM_LOG_STDERR=0")
